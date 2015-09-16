@@ -1,8 +1,7 @@
-# lsignal: C++ implementation of signal and slot system.
+# lsignal: C++ signal/slot system.
 
-lsignal (or lightweight signal) is a very little and fast C++ implementation of signal and
-slot system which is based on modern C++11 code. For performance reasons it's a thread
-unsafe implementation without any synchronization primitives and lock-free algorithms.
+lsignal (or lightweight signal) is a very little and fast C++ thread-safe implementation of signal and
+slot system which is based on modern C++11 code.
 
 ### Requirements
 

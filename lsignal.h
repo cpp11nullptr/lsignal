@@ -30,19 +30,23 @@ SOFTWARE.
 #include <functional>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <vector>
+
+namespace lsignal
+{
+	template<int>
+	struct placeholder_lsignal
+	{
+	};
+}
 
 namespace std
 {
 	// custom std::placeholders
 
-	template<int>
-	struct placeholder_lsignal
-	{
-	};
-
 	template<int N>
-	struct is_placeholder<std::placeholder_lsignal<N>>
+	struct is_placeholder<lsignal::placeholder_lsignal<N>>
 		: integral_constant<int, N+1>
 	{
 	};
@@ -186,6 +190,7 @@ namespace lsignal
 			slot *owner;
 		};
 
+		std::mutex _mutex;
 		bool _locked;
 		std::list<joint> _callbacks;
 
@@ -208,6 +213,8 @@ namespace lsignal
 	template<typename R, typename... Args>
 	signal<R(Args...)>::~signal()
 	{
+		std::lock_guard<std::mutex> locker(_mutex);
+
 		for (auto iter = _callbacks.begin(); iter != _callbacks.end(); ++iter)
 		{
 			const joint& jnt = *iter;
@@ -277,6 +284,8 @@ namespace lsignal
 	template<typename R, typename... Args>
 	void signal<R(Args...)>::disconnect_all()
 	{
+		std::lock_guard<std::mutex> locker(_mutex);
+
 		for (auto iter = _callbacks.begin(); iter != _callbacks.end(); ++iter)
 		{
 			const joint& jnt = *iter;
@@ -292,6 +301,8 @@ namespace lsignal
 	template<typename R, typename... Args>
 	R signal<R(Args...)>::operator() (Args... args)
 	{
+		std::lock_guard<std::mutex> locker(_mutex);
+
 		if (!_locked)
 		{
 			auto iter = _callbacks.cbegin();
@@ -327,6 +338,8 @@ namespace lsignal
 	{
 		std::vector<R> result;
 
+		std::lock_guard<std::mutex> locker(_mutex);
+
 		if (!_locked)
 		{
 			result.reserve(_callbacks.size());
@@ -342,6 +355,8 @@ namespace lsignal
 			}
 		}
 
+		_mutex.unlock();
+
 		return agg(std::move(result));
 	}
 
@@ -349,7 +364,7 @@ namespace lsignal
 	template<typename T, typename U, int... Ns>
 	typename signal<R(Args...)>::callback_type signal<R(Args...)>::construct_mem_fn(const T& fn, U *p, int_sequence<Ns...>) const
 	{
-		return std::bind(fn, p, std::placeholder_lsignal<Ns>{}...);
+		return std::bind(fn, p, placeholder_lsignal<Ns>{}...);
 	}
 
 	template<typename R, typename... Args>
@@ -374,6 +389,8 @@ namespace lsignal
 		jnt.connection = connection;
 		jnt.owner = owner;
 
+		std::lock_guard<std::mutex> locker(_mutex);
+
 		_callbacks.push_back(std::move(jnt));
 
 		return connection;
@@ -382,6 +399,8 @@ namespace lsignal
 	template<typename R, typename... Args>
 	void signal<R(Args...)>::destroy_connection(std::shared_ptr<connection_data> connection)
 	{
+		std::lock_guard<std::mutex> locker(_mutex);
+
 		for (auto iter = _callbacks.begin(); iter != _callbacks.end(); ++iter)
 		{
 			const joint& jnt = *iter;
