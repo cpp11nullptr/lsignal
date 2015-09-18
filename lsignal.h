@@ -100,26 +100,26 @@ namespace lsignal
 
 	};
 
-	connection::connection(std::shared_ptr<connection_data>&& data)
+	inline connection::connection(std::shared_ptr<connection_data>&& data)
 		: _data(std::move(data))
 	{
 	}
 
-	connection::~connection()
+	inline connection::~connection()
 	{
 	}
 
-	bool connection::is_locked() const
+	inline bool connection::is_locked() const
 	{
 		return _data->locked;
 	}
 
-	void connection::set_lock(const bool lock)
+	inline void connection::set_lock(const bool lock)
 	{
 		_data->locked = lock;
 	}
 
-	void connection::disconnect()
+	inline void connection::disconnect()
 	{
 		if (_deleter)
 		{
@@ -138,12 +138,12 @@ namespace lsignal
 
 	};
 
-	slot::slot()
+	inline slot::slot()
 		: connection(std::shared_ptr<connection_data>())
 	{
 	}
 
-	slot::~slot()
+	inline slot::~slot()
 	{
 		disconnect();
 	}
