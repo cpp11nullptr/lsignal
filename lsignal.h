@@ -163,6 +163,12 @@ namespace lsignal
 		signal();
 		~signal();
 
+		signal(const signal& rhs);
+		signal& operator= (const signal& rhs);
+
+		signal(signal&& rhs) = default;
+		signal& operator= (signal&& rhs) = default;
+
 		bool is_locked() const;
 		void set_lock(const bool lock);
 
@@ -197,6 +203,8 @@ namespace lsignal
 		template<typename T, typename U, int... Ns>
 		callback_type construct_mem_fn(const T& fn, U *p, int_sequence<Ns...>) const;
 
+		void copy_callbacks(const std::list<joint>& callbacks);
+
 		std::shared_ptr<connection_data> create_connection(callback_type&& fn, slot *owner);
 		void destroy_connection(std::shared_ptr<connection_data> connection);
 
@@ -225,6 +233,29 @@ namespace lsignal
 				jnt.owner->_deleter = std::function<void(std::shared_ptr<connection_data>)>();
 			}
 		}
+	}
+
+	template<typename R, typename... Args>
+	signal<R(Args...)>::signal(const signal& rhs)
+		: _locked(rhs._locked)
+	{
+		std::lock_guard<std::mutex> locker_own(_mutex);
+		std::lock_guard<std::mutex> locker_rhs(const_cast<signal&>(rhs)._mutex);
+
+		copy_callbacks(rhs._callbacks);
+	}
+
+	template<typename R, typename... Args>
+	signal<R(Args...)>& signal<R(Args...)>::operator= (const signal& rhs)
+	{
+		std::lock_guard<std::mutex> locker_own(_mutex);
+		std::lock_guard<std::mutex> locker_rhs(const_cast<signal&>(rhs)._mutex);
+
+		_locked = rhs._locked;
+
+		copy_callbacks(rhs._callbacks);
+
+		return *this;
 	}
 
 	template<typename R, typename... Args>
@@ -365,6 +396,26 @@ namespace lsignal
 	typename signal<R(Args...)>::callback_type signal<R(Args...)>::construct_mem_fn(const T& fn, U *p, int_sequence<Ns...>) const
 	{
 		return std::bind(fn, p, placeholder_lsignal<Ns>{}...);
+	}
+
+	template<typename R, typename... Args>
+	void signal<R(Args...)>::copy_callbacks(const std::list<joint>& callbacks)
+	{
+		for (auto iter = callbacks.begin(); iter != callbacks.end(); ++iter)
+		{
+			const joint& jn = *iter;
+
+			if (jn.owner == nullptr)
+			{
+				joint jnt;
+
+				jnt.callback = jn.callback;
+				jnt.connection = jn.connection;
+				jnt.owner = nullptr;
+
+				_callbacks.push_back(std::move(jnt));
+			}
+		}
 	}
 
 	template<typename R, typename... Args>
