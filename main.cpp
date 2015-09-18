@@ -162,6 +162,21 @@ int main(int argc, char *argv[])
 
 	printer();
 
+	// example 6
+	std::cout << "\nexample #6:\n";
+
+	signal<void(int)> first;
+	signal<void(int)> second;
+
+	first.connect(&second);
+
+	second.connect([](int x)
+	{
+		std::cout << "x = " << x << "\n";
+	});
+
+	first(10);
+
 	// check performance
 	lsignal::signal<void()> ls;
 	boost::signals2::signal_type<void(), boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex>>::type bs;

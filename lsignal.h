@@ -172,6 +172,9 @@ namespace lsignal
 		bool is_locked() const;
 		void set_lock(const bool lock);
 
+		void connect(signal *sg);
+		void disconnect(signal *sg);
+
 		connection connect(const callback_type& fn, slot *owner = nullptr);
 		connection connect(callback_type&& fn, slot *owner = nullptr);
 
@@ -199,6 +202,9 @@ namespace lsignal
 		std::mutex _mutex;
 		bool _locked;
 		std::list<joint> _callbacks;
+
+		std::list<signal*> _signals;
+		std::list<std::function<void(signal*)>> _deleters;
 
 		template<typename T, typename U, int... Ns>
 		callback_type construct_mem_fn(const T& fn, U *p, int_sequence<Ns...>) const;
@@ -232,6 +238,11 @@ namespace lsignal
 				jnt.owner->_data = nullptr;
 				jnt.owner->_deleter = std::function<void(std::shared_ptr<connection_data>)>();
 			}
+		}
+
+		for (auto iter = _deleters.begin(); iter != _deleters.end(); ++iter)
+		{
+			(*iter)(this);
 		}
 	}
 
@@ -268,6 +279,36 @@ namespace lsignal
 	void signal<R(Args...)>::set_lock(const bool lock)
 	{
 		_locked = lock;
+	}
+
+	template<typename R, typename... Args>
+	void signal<R(Args...)>::connect(signal *sg)
+	{
+		std::lock_guard<std::mutex> locker_own(_mutex);
+		std::lock_guard<std::mutex> locker_sg(sg->_mutex);
+
+		sg->_deleters.push_back([this](signal *s)
+		{
+			disconnect(s);
+		});
+
+		_signals.push_back(std::move(sg));
+	}
+
+	template<typename R, typename... Args>
+	void signal<R(Args...)>::disconnect(signal *sg)
+	{
+		std::lock_guard<std::mutex> locker(_mutex);
+
+		for (auto iter = _signals.begin(); iter != _signals.end(); ++iter)
+		{
+			if (*iter == sg)
+			{
+				_signals.erase(iter);
+
+				break;
+			}
+		}
 	}
 
 	template<typename R, typename... Args>
@@ -336,6 +377,11 @@ namespace lsignal
 
 		if (!_locked)
 		{
+			for (auto iter = _signals.begin(); iter != _signals.end(); ++iter)
+			{
+				(*iter)->operator()(std::forward<Args>(args)...);
+			}
+
 			auto iter = _callbacks.cbegin();
 			auto last = --_callbacks.cend();
 
@@ -373,6 +419,11 @@ namespace lsignal
 
 		if (!_locked)
 		{
+			for (auto iter = _signals.begin(); iter != _signals.end(); ++iter)
+			{
+				(*iter)->operator()(std::forward<Args>(args)...);
+			}
+
 			result.reserve(_callbacks.size());
 
 			for (auto iter = _callbacks.cbegin(); iter != _callbacks.cend(); ++iter)
