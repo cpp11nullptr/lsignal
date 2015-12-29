@@ -199,7 +199,7 @@ namespace lsignal
 			slot *owner;
 		};
 
-		std::mutex _mutex;
+		mutable std::mutex _mutex;
 		bool _locked;
 		std::list<joint> _callbacks;
 
@@ -250,8 +250,10 @@ namespace lsignal
 	signal<R(Args...)>::signal(const signal& rhs)
 		: _locked(rhs._locked)
 	{
-		std::lock_guard<std::mutex> locker_own(_mutex);
-		std::lock_guard<std::mutex> locker_rhs(const_cast<signal&>(rhs)._mutex);
+		std::unique_lock<std::mutex> lock_own(_mutex, std::defer_lock);
+		std::unique_lock<std::mutex> lock_rhs(rhs._mutex, std::defer_lock);
+
+		std::lock(lock_own, lock_rhs);
 
 		copy_callbacks(rhs._callbacks);
 	}
@@ -259,8 +261,10 @@ namespace lsignal
 	template<typename R, typename... Args>
 	signal<R(Args...)>& signal<R(Args...)>::operator= (const signal& rhs)
 	{
-		std::lock_guard<std::mutex> locker_own(_mutex);
-		std::lock_guard<std::mutex> locker_rhs(const_cast<signal&>(rhs)._mutex);
+		std::unique_lock<std::mutex> lock_own(_mutex, std::defer_lock);
+		std::unique_lock<std::mutex> lock_rhs(rhs._mutex, std::defer_lock);
+
+		std::lock(lock_own, lock_rhs);
 
 		_locked = rhs._locked;
 
