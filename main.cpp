@@ -190,6 +190,16 @@ int main(int argc, char *argv[])
 	}
 	sig7();
 
+        // example 8
+	std::cout << "\nexample #8: disconnect_all\n";
+
+	signal<void()> sig8;
+	sig8.connect(bar);
+	sig8.connect(bar);
+	sig8.connect(bar);
+	sig8.disconnect_all();
+	sig8();
+
 
 	// check performance
 	lsignal::signal<void()> ls;
