@@ -177,6 +177,20 @@ int main(int argc, char *argv[])
 
 	first(10);
 
+        // example 7
+	std::cout << "\nexample #7: slot\n";
+
+	signal<void()> sig7;
+	{
+		slot s;
+
+		// sig7.connect(bar, &s); // compile error
+		sig7.connect([](){ std::cout << "sig7\n"; }, &s);
+		sig7();
+	}
+	sig7();
+
+
 	// check performance
 	lsignal::signal<void()> ls;
 	boost::signals2::signal_type<void(), boost::signals2::keywords::mutex_type<boost::signals2::dummy_mutex>>::type bs;
