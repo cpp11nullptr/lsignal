@@ -371,16 +371,23 @@ namespace lsignal
 	{
 		std::lock_guard<std::mutex> locker(_mutex);
 
-		for (auto iter = _callbacks.begin(); iter != _callbacks.end(); ++iter)
+		for (const auto& jnt : _callbacks)
 		{
-			const joint& jnt = *iter;
-
 			if (jnt.owner != nullptr)
 			{
 				jnt.owner->_data = nullptr;
-				jnt.owner->_deleter = std::move(std::function<void(std::shared_ptr<connection_data>)>());
+				jnt.owner->_cleaners.clear();
 			}
 		}
+		_callbacks.clear();
+		for (auto sig : _children)
+		{
+			if (sig->_parent == this) // should be an assert
+			{
+				sig->_parent = nullptr;
+			}
+		}
+		_children.clear();
 	}
 
 	template<typename R, typename... Args>
