@@ -32,6 +32,7 @@ SOFTWARE.
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <algorithm>
 
 namespace lsignal
 {
@@ -92,8 +93,14 @@ namespace lsignal
 		friend class signal;
 
 	public:
+
+		connection() = default;		
 		connection(std::shared_ptr<connection_data>&& data);
-		virtual ~connection();
+		connection(connection&) = default;
+		connection(connection&&);
+		~connection() = default;
+		connection& operator = (connection&) = default;
+		connection& operator = (connection&& other);
 
 		bool is_locked() const;
 		void set_lock(const bool lock);
@@ -111,9 +118,18 @@ namespace lsignal
 	{
 	}
 
-	inline connection::~connection()
-	{
+	inline connection::connection(connection&& rhs)
+		: _data(std::move(rhs._data)), _cleaners(std::move(rhs._cleaners))
+	{		
 	}
+
+	inline connection& connection::operator = (connection&& rhs)
+	{
+		std::swap(_data, rhs._data);
+		std::swap(_cleaners, rhs._cleaners);
+		return *this;
+	}
+
 
 	inline bool connection::is_locked() const
 	{
@@ -144,7 +160,7 @@ namespace lsignal
 	{
 	public:
 		slot();
-		~slot() override;
+		~slot();
 
 	};
 
