@@ -49,7 +49,7 @@ public:
 	{
 		if (expected != actual)
 		{
-			throw std::exception(MakeString("\n\n  %s\n\n    Excepted: %d\n    Actual: %d", message, expected, actual).c_str());
+			throw std::logic_error(MakeString("\n\n  %s\n\n    Excepted: %d\n    Actual: %d", message, expected, actual));
 		}
 	}
 
@@ -57,7 +57,7 @@ public:
 	{
 		if (expected != actual)
 		{
-			throw std::exception(MakeString("\n\n  %s\n\n    Excepted: %s\n    Actual: %s", message, expected ? "true" : "false", actual ? "true" : "false").c_str());
+			throw std::logic_error(MakeString("\n\n  %s\n\n    Excepted: %s\n    Actual: %s", message, expected ? "true" : "false", actual ? "true" : "false"));
 		}
 	}
 
@@ -304,6 +304,48 @@ void CreateSignalToSignalConnection_WhenSecondSignalIsDestryoed_FirstSignalShoul
 	AssertHelper::VerifyValue(receiverTwoCalled, false, "Second receiver should not be called.");
 }
 
+void StoreConnectionInOuterScope_ContructMoveAndDisconnect()
+{
+	TestRunner::StartTest(MethodName);
+
+	lsignal::connection connection;
+	
+	/* limit scope */ 
+	{
+		lsignal::signal<void ()> signal;
+
+		connection = signal.connect([] () {});
+
+		connection.disconnect();
+	}
+}
+
+void StoreConnectionInOuterScope_StrayDisconnect()
+{
+	TestRunner::StartTest(MethodName);
+
+	lsignal::connection connection;
+	connection.disconnect();
+}
+
+void StoreConnectionInOuterScope_OutOfScopeDisconnect()
+{
+	TestRunner::StartTest(MethodName);
+
+	lsignal::connection connection;
+	
+	/* limit scope */ 
+	{
+		lsignal::signal<void ()> signal;
+
+		connection = signal.connect([] () {});
+
+		connection.disconnect();
+	}
+
+	connection.disconnect();
+}
+
 int main(int argc, char *argv[])
 {
 	(void)argc;
@@ -318,6 +360,9 @@ int main(int argc, char *argv[])
 	ExecuteTest(SetSameOwnerToSeveralSignals_AllSignalsShouldBeNotifiedAboutOwnerDestruction);
 	ExecuteTest(CreateSignalToSignalConnection_WhenFirstSignalIsDestroyed_SecondSignalShouldBeNotifed);
 	ExecuteTest(CreateSignalToSignalConnection_WhenSecondSignalIsDestryoed_FirstSignalShouldBeNotifed);
+	ExecuteTest(StoreConnectionInOuterScope_ContructMoveAndDisconnect);
+	ExecuteTest(StoreConnectionInOuterScope_StrayDisconnect);
+	ExecuteTest(StoreConnectionInOuterScope_OutOfScopeDisconnect);
 
 	std::cin.get();
 
