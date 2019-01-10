@@ -32,6 +32,7 @@ SOFTWARE.
 #include <memory>
 #include <mutex>
 #include <vector>
+#include <algorithm>
 
 namespace lsignal
 {
@@ -47,7 +48,7 @@ namespace std
 
 	template<int N>
 	struct is_placeholder<lsignal::placeholder_lsignal<N>>
-		: integral_constant<int, N+1>
+		: integral_constant<int, N + 1>
 	{
 	};
 }
@@ -63,7 +64,7 @@ namespace lsignal
 
 	template<int N, int... Ns>
 	struct make_int_sequence
-		: make_int_sequence<N-1, N-1, Ns...>
+		: make_int_sequence<N - 1, N - 1, Ns...>
 	{
 	};
 
@@ -92,8 +93,14 @@ namespace lsignal
 		friend class signal;
 
 	public:
+
+		connection() = default;
 		connection(std::shared_ptr<connection_data>&& data);
-		virtual ~connection();
+		connection(const connection&) = default;
+		connection(connection&&);
+		virtual ~connection() = default;
+		connection& operator = (const connection&) = default;
+		connection& operator = (connection&& other);
 
 		bool is_locked() const;
 		void set_lock(const bool lock);
@@ -111,9 +118,18 @@ namespace lsignal
 	{
 	}
 
-	inline connection::~connection()
+	inline connection::connection(connection&& rhs)
+		: _data(std::move(rhs._data)), _cleaners(std::move(rhs._cleaners))
 	{
 	}
+
+	inline connection& connection::operator = (connection&& rhs)
+	{
+		std::swap(_data, rhs._data);
+		std::swap(_cleaners, rhs._cleaners);
+		return *this;
+	}
+
 
 	inline bool connection::is_locked() const
 	{
@@ -144,7 +160,11 @@ namespace lsignal
 	{
 	public:
 		slot();
-		~slot() override;
+		slot(const slot&) = default;
+		slot(slot&&) = default;
+		~slot();
+		slot& operator = (const slot& rhs) = default;
+		slot& operator = (slot&& rhs) = default;
 
 	};
 
