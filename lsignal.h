@@ -27,6 +27,7 @@ SOFTWARE.
 #ifndef LSIGNAL_H
 #define LSIGNAL_H
 
+#include <algorithm>
 #include <functional>
 #include <list>
 #include <memory>
@@ -399,7 +400,7 @@ namespace lsignal
 		{
 			for (signal *sig : _children)
 			{
-				sig->operator()(std::forward<Args>(args)...);
+				sig->operator()(args...);
 			}
 
 			for (auto iter = _callbacks.cbegin(); iter != _callbacks.cend(); ++iter)
@@ -410,10 +411,10 @@ namespace lsignal
 				{
 					if (std::next(iter, 1) == _callbacks.cend())
 					{
-						return jnt.callback(std::forward<Args>(args)...);
+						return jnt.callback(args...);
 					}
 
-					jnt.callback(std::forward<Args>(args)...);
+					jnt.callback(args...);
 				}
 			}
 		}
@@ -433,7 +434,7 @@ namespace lsignal
 		{
 			for (signal *sig : _children)
 			{
-				sig->operator()(std::forward<Args>(args)...);
+				sig->operator()(args...);
 			}
 
 			result.reserve(_callbacks.size());
@@ -444,7 +445,7 @@ namespace lsignal
 
 				if (!jnt.connection->locked)
 				{
-					result.push_back(std::move(jnt.callback(std::forward<Args>(args)...)));
+					result.push_back(std::move(jnt.callback(args...)));
 				}
 			}
 		}
